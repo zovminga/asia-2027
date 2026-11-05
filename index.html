@@ -104,20 +104,35 @@ svg.map{display:block;width:100%;height:auto}
   padding:7px 14px;font:inherit;font-size:10.5px;font-weight:800;letter-spacing:.08em;
   text-transform:uppercase;cursor:pointer;margin-right:-1.5px}
 .basis button[aria-pressed="true"]{background:var(--blue);color:var(--card)}
-.plans{border:1.5px solid var(--blue);background:var(--card);margin:14px 0 20px;padding:4px}
+.sort{display:flex;flex-wrap:wrap;align-items:center;gap:0;margin:10px 0 0}
+.sort span{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink3);margin-right:10px}
+.sort button{border:1.5px solid var(--blue);background:transparent;color:var(--blue);
+  padding:6px 11px;font:inherit;font-size:10.5px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;cursor:pointer;margin-right:-1.5px}
+.sort button[aria-pressed="true"]{background:var(--blue);color:var(--card)}
+/* на телефоне подпись «сортировать» съедает строку — четыре кнопки важнее */
+@media(max-width:620px){.sort span{display:none}.sort button{padding:6px 8px;font-size:10px}}
+/* свёрнутая строка — только имя, ключ сортировки и цена. Даты и пояснение
+   показываются у выбранного варианта: иначе список занимает целый экран */
+.plans{border:1.5px solid var(--blue);background:var(--card);margin:10px 0 20px;padding:4px;
+  max-height:min(58vh,460px);overflow-y:auto;overscroll-behavior:contain}
 .plans button{display:block;width:100%;border:0;background:transparent;color:inherit;font:inherit;
-  font-size:13px;font-weight:700;padding:10px 12px;cursor:pointer;text-align:left;line-height:1.3;
-  transition:background .15s,color .15s;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:baseline}
+  font-size:13px;font-weight:700;padding:8px 12px;cursor:pointer;text-align:left;line-height:1.3;
+  transition:background .15s,color .15s;display:grid;grid-template-columns:1fr auto;gap:3px 12px;align-items:baseline}
 .plans button+button{border-top:1px solid var(--sep)}
 .plans button:hover{background:var(--blue-ghost)}
 .plans button[aria-pressed="true"]{background:var(--blue);color:var(--card)}
 .plans button[aria-pressed="true"] .p2{color:var(--card);opacity:.72}
 .plans button[aria-pressed="true"]+button{border-top-color:transparent}
-.plans .p2{grid-column:1;font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.02em}
+.plans .p2{grid-column:1;font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.02em;display:none}
+.plans .k{font-size:11px;font-weight:700;color:var(--ink3);margin-left:8px;white-space:nowrap}
+.plans button[aria-pressed="true"] .k{color:var(--card);opacity:.75}
+.plans button[aria-pressed="true"] .p2,.plans button[aria-pressed="true"] .pe i{display:block}
 .plans .dt{font-weight:800;opacity:.85}
 .leg .pr.z{font-size:10px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;opacity:.65}
 .plans .pe{font-size:14px;font-weight:800;white-space:nowrap;text-align:right}
-.plans .pe i{display:block;font-style:normal;font-size:9.5px;font-weight:600;letter-spacing:.01em;text-transform:none;color:var(--ink3);margin-top:2px;white-space:nowrap}
+.plans .pe i{display:none;font-style:normal;font-size:9.5px;font-weight:600;letter-spacing:.01em;text-transform:none;color:var(--ink3);margin-top:2px;white-space:nowrap}
 .plans .bg{display:inline-block;border:1px solid currentColor;font-size:9.5px;font-weight:800;
   letter-spacing:.09em;text-transform:uppercase;padding:1px 5px;margin-left:7px;vertical-align:1px;white-space:nowrap}
 /* факты: что в этом сезоне меняет даты или маршрут */
@@ -228,6 +243,13 @@ svg.map{display:block;width:100%;height:auto}
 <div class="basis" id="basis">
   <button data-b="all" aria-pressed="true">Дорога и жильё</button>
   <button data-b="eur" aria-pressed="false">Только дорога</button>
+</div>
+<div class="sort" id="sort">
+  <span>Сортировать</span>
+  <button data-o="price" aria-pressed="true">Цена</button>
+  <button data-o="meet" aria-pressed="false">Дни вместе</button>
+  <button data-o="comfort" aria-pressed="false">Комфорт</button>
+  <button data-o="rich" aria-pressed="false">Места</button>
 </div>
 <div class="plans" id="plans"></div>
 
@@ -447,7 +469,8 @@ svg.map{display:block;width:100%;height:auto}
   var ICON={air:'M2 12l18-7-5 7 5 7z',rail:'M6 4h12v10H6zM6 14l-2 5M18 14l2 5M9 8h6',metro:'M4 12a8 8 0 0116 0M8 12v5M16 12v5'};
 
   var svg=document.getElementById('svg'),tip=document.getElementById('tip'),box=document.getElementById('box'),hint=document.getElementById('hint');
-  var st={city:null,hot:null,set:null,group:'us',season:SEASONS[0].k,leg:null,basis:'all'},R=[];
+  var st={city:null,hot:null,set:null,group:'us',season:SEASONS[0].k,leg:null,basis:'all',
+    sort:'price'},R=[];
   function N(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);return e}
 
   // --- строим один раз ---
@@ -615,18 +638,32 @@ svg.map{display:block;width:100%;height:auto}
     });
 
     // второй уровень: варианты выбранного человека
-    var box=document.getElementById('plans');
-    if(!st.group){box.style.display='none';return}
-    box.style.display='';
+    var box=document.getElementById('plans'),bar=document.getElementById('sort');
+    if(!st.group){box.style.display='none';bar.style.display='none';return}
+    box.style.display='';bar.style.display='';
     var list=mine().filter(function(s){return s.g===st.group});
+    // порядок в places.yaml осмысленный, поэтому он же и разрешает ничьи
+    var how=st.sort;
+    list=list.map(function(s,i){return{s:s,i:i}}).sort(function(a,b){
+      var d=how==='meet'?(b.s.m.meet||0)-(a.s.m.meet||0)
+           :how==='comfort'?(a.s.m.hours||0)-(b.s.m.hours||0)
+           :how==='rich'?(b.s.m.places||0)-(a.s.m.places||0)
+           :a.s.m[st.basis]-b.s.m[st.basis];
+      return d||a.i-b.i;
+    }).map(function(x){return x.s});
     if(!list.length){
       box.innerHTML='<button disabled><span>Вариантов нет</span><span class="p2">'+
         'на этот сезон билеты ещё не искали</span></button>'; return;
     }
     box.innerHTML=list.map(function(s){
       var bg=s.m&&s.m[st.basis==='all'?'cheap':'cheap0']?'<span class="bg">дешевле</span>':'';
+      // по какому ключу отсортировано, то и показываем в строке: цена и так справа
+      var k=how==='meet'?many(s.m.meet||0,'день','дня','дней')+' вместе'
+           :how==='comfort'?Math.round(s.m.hours||0)+' ч в дороге'
+           :how==='rich'?many(s.m.places||0,'место','места','мест')+' в плане'
+           :'';
       return '<button data-s="'+s.id+'" aria-pressed="'+(st.set===s.id)+'">'+
-        '<span>'+s.n+bg+'</span><span class="pe">€'+s.m[st.basis]+'<i>'+
+        '<span>'+s.n+bg+(k?'<span class="k">'+k+'</span>':'')+'</span><span class="pe">€'+s.m[st.basis]+'<i>'+
           (st.basis==='all'
             ? '€'+s.m.eur+' дорога + €'+(s.m.stay+(s.m.flat||0))+' жильё'
             : 'на человека, без жилья')+'</i></span>'+
@@ -801,6 +838,15 @@ svg.map{display:block;width:100%;height:auto}
       [].forEach.call(document.querySelectorAll('#basis button'),function(x){
         x.setAttribute('aria-pressed',String(x.dataset.b===st.basis))});
       sets();side();card();
+    });
+  });
+
+  [].forEach.call(document.querySelectorAll('#sort button'),function(b){
+    b.addEventListener('click',function(){
+      st.sort=b.dataset.o;
+      [].forEach.call(document.querySelectorAll('#sort button'),function(x){
+        x.setAttribute('aria-pressed',String(x.dataset.o===st.sort))});
+      sets();
     });
   });
 
