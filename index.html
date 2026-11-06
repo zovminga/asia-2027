@@ -751,17 +751,18 @@ svg.map{display:block;width:100%;height:auto}
           : 'плана по дням нет — не посчитать')+
         row('Дней вместе',sc.meet,m.meet==null
           ? 'не с чем сравнивать'
-          : many(m.meet,'день','дня','дней')+' в одном городе: '+esc(m.meet_when||'')+
-            (m.meet_where?', '+esc(m.meet_where):'')+
+          : many(m.meet,'день','дня','дней')+' рядом: '+esc(m.meet_when||'')+
+            (m.meet_where?'. Города: '+esc(m.meet_where):'')+
             '. Это если '+esc(m.meet_who||'')+' вариант «'+esc(m.meet_with||'')+'»'+
             (m.meet_cheap!=null&&m.meet_cheap<m.meet
               ? '; с самым дешёвым '+esc(m.meet_poss||'')+' вариантом («'+esc(m.meet_cheap_with)+'») — '+
                 many(m.meet_cheap,'день','дня','дней')+(m.meet_cheap_when?', '+esc(m.meet_cheap_when):'')
               : '')+
             (m.meet_bad&&m.meet_bad.length
-              ? '<span class="warn">Не сочетается: '+m.meet_bad.slice(0,3).map(function(b){
+              ? '<span class="warn">Мало общих дней с этими вариантами: '+m.meet_bad.slice(0,3).map(function(b){
                   return '«'+esc(b.n)+'» — '+many(b.d,'день','дня','дней')}).join(', ')+
-                (m.meet_bad.length>3?' и ещё '+(m.meet_bad.length-3):'')+'</span>'
+                (m.meet_bad.length>3?' и ещё '+(m.meet_bad.length-3):'')+
+                '. Маршрут цел, просто даты почти не пересекаются</span>'
               : ''))+
         row('Насыщенность',sc.rich,m.places
           ? many(m.places,'место','места','мест')+' в плане'
