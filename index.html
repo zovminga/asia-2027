@@ -137,6 +137,9 @@ svg.map{display:block;width:100%;height:auto}
    город вылета сравнивают по всем планам сразу */
 .plans .pe u{display:block;text-decoration:none;font-size:10px;font-weight:700;
   letter-spacing:.01em;color:var(--blue);margin-top:3px;white-space:nowrap}
+/* значок «дешевле» у второй цены: он про неё, а не про крупную */
+.plans .pe u b{font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  border:1px solid currentColor;padding:0 4px;margin-left:6px}
 .plans button[aria-pressed="true"] .pe u{color:var(--card);opacity:.82}
 .plans .pe i{display:none;font-style:normal;font-size:9.5px;font-weight:600;letter-spacing:.01em;text-transform:none;color:var(--ink3);margin-top:2px;white-space:nowrap}
 .plans .bg.pk{background:var(--blue);color:var(--card);border-color:var(--blue)}
@@ -873,12 +876,14 @@ svg.map{display:block;width:100%;height:auto}
         'на этот интервал билеты ещё не искали</span></button>'; return;
     }
     box.innerHTML=list.map(function(s){
-      // у наборов с двумя городами вылета значок считается по основному билету,
-      // поэтому город назван прямо: иначе списки родителей и мамы Лизы спорят
-      /* значок «дешевле» считается по каждому городу вылета отдельно и подписан им:
-         из Москвы и из Казани дешёвым выходит не один и тот же маршрут */
-      var bg=((s.m&&s.m[st.basis==='all'?'cheap':'cheap0'])||[]).map(function(t){
+      /* значок «дешевле» считается по каждому городу вылета отдельно, и стоит он
+         рядом с той ценой, к которой относится. Пока «дешевле из Казани» висело
+         у крупной московской цены, оно читалось как ошибка: соседняя карточка
+         показывала число меньше */
+      var ch=(s.m&&s.m[st.basis==='all'?'cheap':'cheap0'])||[], base=(s.m&&s.m.alt_base)||'';
+      var bg=ch.filter(function(t){return t===base}).map(function(t){
         return '<span class="bg">дешевле'+(t?' из '+esc(t):'')+'</span>'}).join('');
+      var bgAlt=ch.some(function(t){return t!==base})?'<b>дешевле</b>':'';
       // маршрут, который мы предлагаем как основной: помечен pick в places.yaml
       if(s.pick)bg='<span class="bg pk">наш выбор</span>'+bg;
       // по какому ключу отсортировано, то и показываем в строке: цена и так справа
@@ -897,7 +902,7 @@ svg.map{display:block;width:100%;height:auto}
           (st.basis==='all'
             ? '€'+s.m.eur+' дорога + €'+(s.m.stay+(s.m.flat||0))+' жильё'
             : 'на человека, без жилья')+
-          '</i>'+(alt?'<u>'+esc(s.m.alt_n)+' €'+alt+'</u>':'')+'</span>'+
+          '</i>'+(alt?'<u>'+esc(s.m.alt_n)+' €'+alt+bgAlt+'</u>':'')+'</span>'+
         '<span class="p2"><span class="dt">'+(s.dt||'')+'</span>'+
         (s.sub?' · '+s.sub:'')+'</span></button>';
     }).join('');
