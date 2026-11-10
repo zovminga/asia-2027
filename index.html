@@ -385,7 +385,7 @@ svg.map{display:block;width:100%;height:auto}
   /* DATA-START */
   var VIEW={"w":900,"h":620};
   var GROUPS=[{"k":"us","n":"Мы с Лизой","sh":"мы"},{"k":"parents","n":"Родители Азата","sh":"родители"},{"k":"mom","n":"Мама Лизы","sh":"мама Лизы"}];
-  var WINDOWS=[{"k":"jan414","n":"4–14 января","sub":"9 ночей. Туда прямым рейсом, в Шанхае в 06:55 — первый день целый"},{"k":"jan516","n":"5–16 января","sub":"10 ночей. Билет дешевле на 10 тысяч, но туда через Пекин"},{"k":"jan616","n":"6–16 января","sub":"9 ночей. Самый дешёвый билет, но в Шанхае только в 13:25"}];
+  var WINDOWS=[{"k":"jan414","n":"4–14 января","sub":"9 ночей. Туда прямым рейсом, в Шанхае в 06:55 — первый день целый","byg":{"mom":{"n":"4–12 января","sub":"7 ночей. Туда через Пекин, в Шанхае 5-го в 13:25, дома 12-го вечером"},"us":{"sub":"В Китае 4–12 января, дальше месяц в Японии. Туда из Белграда 3-го через Стамбул"}}},{"k":"jan516","n":"5–16 января","sub":"10 ночей. Билет дешевле на 10 тысяч, но туда через Пекин","byg":{"us":{"sub":"В Китае 6–14 января, дальше месяц в Японии. Туда из Белграда 5-го через Стамбул"}}},{"k":"jan616","n":"6–16 января","sub":"9 ночей. Самый дешёвый билет, но в Шанхае только в 13:25","byg":{"us":{"sub":"В Китае 6–14 января, дальше месяц в Японии. Туда из Белграда 5-го через Стамбул"}}}];
   var FACTS=[{"s":["feb"],"w":"6 февраля 2027","t":"Китайский Новый год","c":"Нерабочая неделя 6–12 февраля по всей стране. Музеи и магазины работают по своему расписанию, транспорт забит. Январских интервалов не касается: они кончаются до праздника"},{"s":["feb"],"w":"20 февраля","t":"Праздник фонарей","c":"Конец новогоднего цикла. Вечером фонари и толпы в центрах городов"},{"s":["jan1324","feb"],"w":"22 января – 2 марта","t":"Новогодние переезды по Китаю","c":"Чуньюнь: 15 дней до Нового года и 25 после, вся страна едет к родным и обратно. Билеты на поезда и внутренние рейсы разбирают заранее, цены растут, вокзалы забиты. Из январских интервалов задевает только 13–24, и то три дня. Остальные три кончаются до начала"},{"s":[],"w":"декабрь – февраль","t":"Снежные обезьяны, Дзигокудани","c":"Макаки сидят в горячем источнике. Снег вероятнее в январе и феврале, зимой парк с 9:00 до 16:00, вход 800 ¥. Это север от Токио — отдельная поездка. На Авадзи у Кобе обезьяны тоже есть, но без источника; туда по пути только если влетаем в Фукуоку"},{"s":[],"w":"ср, пт, вс","t":"Прямой Казань — Шанхай","c":"Летает три раза в неделю, 8 часов туда и 9 обратно. Белград — Шанхай у Air Serbia по вторникам и субботам. Даты родителей и наши можно двигать только по этой сетке"},{"s":[],"w":"примерно за 2 месяца","t":"Когда появятся цены на поезда","c":"Китайские железные дороги открывают продажу за два месяца. На январь 2027 это середина ноября 2026 — до тех пор все цены по Чунцину, Гуйлиню и Чжанцзяцзе это «от» с Trip.com, а не настоящие"}];
   var SNAP=["2026-11-04","2026-11-10"];
   var LAND=[
@@ -890,6 +890,14 @@ svg.map{display:block;width:100%;height:auto}
         '<span class="t">'+esc(f.t)+'</span><span class="c">'+esc(f.c)+'</span></div>'}).join('')+'</div>';
   }
 
+  function winOf(k){return WINDOWS.filter(function(w){return w.k===k})[0];}
+  function winPart(k,g,f){
+    var w=winOf(k); if(!w)return '';
+    var o=w.byg&&w.byg[g||st.group];
+    return (o&&o[f])||w[f];
+  }
+  function winN(k,g){return winPart(k,g,'n');}
+  function winS(k,g){return winPart(k,g,'sub');}
   function winsFor(g){
     return WINDOWS.filter(function(w){
       return SETS.some(function(s){return s.s.indexOf(w.k)>=0&&(!g||s.g===g)})});
@@ -899,7 +907,7 @@ svg.map{display:block;width:100%;height:auto}
     if(!list.some(function(w){return w.k===st.win}))st.win=list.length?list[0].k:null;
     document.getElementById('win').innerHTML=list.map(function(s){
       return '<button data-k="'+s.k+'" aria-pressed="'+(st.win===s.k)+'">'+
-        '<span class="sn">'+s.n+'</span><span class="sb">'+s.sub+'</span></button>';
+        '<span class="sn">'+esc(winN(s.k))+'</span><span class="sb">'+esc(winS(s.k))+'</span></button>';
     }).join('');
     [].forEach.call(document.querySelectorAll('#win button'),function(b){
       b.addEventListener('click',function(){
@@ -1094,7 +1102,7 @@ svg.map{display:block;width:100%;height:auto}
       var hh=A?m.alt_hours:m.hours, ff=A?m.alt_far:m.far, ll=A?m.alt_lay:m.lay,
           ov=A?m.comfort_over_alt:m.comfort_over;
       h='<div class="ch"><b>'+esc(s.n)+'</b><span class="who2">'+
-        esc(WINDOWS.filter(function(x){return x.k===st.win})[0].n)+' · '+esc(who?who.n:'')+'</span>'+
+        esc(winN(st.win,s.g))+' · '+esc(who?who.n:'')+'</span>'+
         '<button class="x" data-close aria-label="Закрыть">×</button></div><div class="sc">'+
         row('Цена',st.basis==='all'?(A?sc.price_alt:sc.price):(A?sc.price0_alt:sc.price0),
           st.basis==='eur' ? '€'+pv(s,'eur')+' на человека, только дорога'
@@ -1168,7 +1176,7 @@ svg.map{display:block;width:100%;height:auto}
           (drawable(e)?'':' · за рамкой')+'</span></span>'+
         (e.z?'<span class="pr z">тот же билет</span>'
              :'<span class="pr">€'+e.e+'</span>')+'</button></li>';}).join('');
-    var sn=WINDOWS.filter(function(s){return s.k===st.win})[0].n,val,lab;
+    var sn=winN(st.win),val,lab;
     if(st.set){
       var cur=SETS.filter(function(s){return s.id===st.set})[0];
       val='€'+pv(cur);
