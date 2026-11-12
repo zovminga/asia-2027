@@ -206,6 +206,47 @@ svg.map{display:block;width:100%;height:auto}
 .sc .dots.none{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3)}
 .sc .dots i.f{background:var(--blue)}
 .sc .v{font-size:11px;color:var(--ink2);line-height:1.35;display:block;margin-top:3px}
+
+/* --- куплено или нет, прибито или нет ------------------------------------ */
+/* «ок» и «ещё нет» различаются не только цветом: у купленного стоит галочка,
+   у некупленного слово «нет» — чтобы читалось и в чёрно-белой печати */
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));
+  gap:0;margin:0 0 24px}
+.status .col{border:1.5px solid var(--blue);margin:-0.75px;padding:12px 14px}
+.status .col h3{margin:0 0 9px;font-size:10.5px;font-weight:800;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--blue);display:flex;align-items:center;gap:7px}
+.status .col h3 i{font-style:normal;font-size:10px;border:1.3px solid currentColor;
+  border-radius:9px;padding:0 6px;line-height:15px;opacity:.75}
+.status .col.fix h3::before{content:'✓';font-size:13px;line-height:1}
+.status .col.open h3::before{content:'•';font-size:17px;line-height:.7}
+.status .col.open h3{color:var(--bad)}
+.status .col.open{border-color:var(--bad)}
+.status .col>div{padding:5px 0;border-top:1px solid var(--sep)}
+.status .col>div:first-of-type{border-top:0}
+.status b{display:block;font-size:13px;font-weight:700;line-height:1.3}
+.status span{display:block;font-size:11.5px;color:var(--ink2);line-height:1.4;margin-top:2px}
+
+.win .only{margin:0 0 10px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 9px}
+.win .only .sn{color:var(--blue)}
+.win .only .sb{opacity:1;color:var(--ink2)}
+
+.plans .bg.ok{border-color:var(--jp);color:var(--jp)}
+.plans button[aria-pressed="true"] .bg.ok{border-color:var(--card);color:var(--card)}
+
+.card .buy{padding:8px 14px;border-bottom:1.5px solid var(--blue);font-size:11.5px;
+  line-height:1.4;color:var(--ink2)}
+.card .buy::before{font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  font-size:10px;display:block;margin-bottom:2px}
+.card .buy.ok::before{content:'✓ куплено';color:var(--jp)}
+.card .buy.no::before{content:'• не куплено';color:var(--bad)}
+
+.leg .bought{flex:none;font-size:9px;font-weight:800;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--jp);border:1.2px solid var(--jp);
+  border-radius:3px;padding:1px 4px;margin-left:6px}
+.leg li.opt .bought{opacity:.55}
+
+.trio em{display:block;font-style:normal;border:1.5px solid var(--sep);background:var(--card);
+  color:var(--ink2);font-size:12px;padding:6px 8px;line-height:1.3}
 .plan{list-style:none;margin:0;padding:0;max-height:430px;overflow:auto}
 .plan li{display:grid;grid-template-columns:48px 1fr;gap:11px;padding:10px 14px;border-top:1px solid var(--sep)}
 .plan li:first-child{border-top:0}
@@ -324,10 +365,12 @@ svg.map{display:block;width:100%;height:auto}
 <p class="draft" id="snap"></p>
 
 <h1>Карта маршрутов</h1>
-<p class="lead">Три шага: сначала чей маршрут смотреть, потом даты, потом сам вариант. Список дат свой у каждого: сейчас у всех троих он одинаковый, но расходиться им ничто не мешает. На карте останутся только перелёты и поезда выбранного варианта, сбоку посчитается цена.</p>
-<p class="lead" style="margin-top:8px">Цена — на одного человека: дорога плюс жильё. Дорога посчитана по билетам.
-Отели прикинуты по средней цене ночи в каждом городе — точные ещё не искали. Токио считается отдельно: там не отель,
-а квартира Dash Living за €910 в месяц на двоих, аренда помесячная. Еда и городской транспорт не посчитаны нигде.</p>
+<p class="lead">Билеты куплены, даты закрыты. Выберите, чей маршрут смотреть — на карте останутся только его перелёты и поезда, сбоку посчитается цена.</p>
+<p class="lead" style="margin-top:8px">Цена — на одного человека: дорога по билетам плюс жильё.
+Квартира в Токио считается месяцами, а не ночами: €910 за месяц на двоих. Еда и городской транспорт
+не посчитаны нигде.</p>
+
+<div class="status" id="status"></div>
 
 <noscript>
   <p class="draft" style="border-left-color:#C0392B">Карта не открылась: в этом окне не выполняются
@@ -380,7 +423,7 @@ svg.map{display:block;width:100%;height:auto}
       <div><i>→</i><span>Нажмите город — останутся только дороги через него</span></div>
       <div><i>→</i><span>Выберите вариант, потом нажмите Китай или кнопку «Китай крупно» — он откроется во весь экран, с днями и ценой ночи по городам</span></div>
       <div><i>→</i><span>Кнопки над картой — какой маршрут показывать</span></div>
-      <div><i>→</i><span>Пять точек — всегда лучше. Цена и комфорт — это сравнение с лучшим вариантом в той же колонке, а не оценка сама по себе: долгая дорога из Белграда есть у всех, вопрос только насколько один вариант хуже другого</span></div>
+      <div><i>→</i><span>Зелёным помечены билеты, которые уже куплены</span></div>
     </div>
   </div>
 
@@ -403,6 +446,7 @@ svg.map{display:block;width:100%;height:auto}
   var VIEW={"w":900,"h":620};
   var GROUPS=[{"k":"us","n":"Мы с Лизой","sh":"мы"},{"k":"parents","n":"Родители Азата","sh":"родители"},{"k":"mom","n":"Мама Лизы","sh":"мама Лизы"}];
   var WINDOWS=[{"k":"jan414","n":"4–14 января","sub":"9 ночей. Билет куплен: туда прямым рейсом, в Шанхае в 06:55 — первый день целый","byg":{"mom":{"n":"4–12 января","sub":"7 ночей. Билет куплен: туда через Пекин, в Хунцяо в 13:55 — первый день половинный"},"us":{"sub":"В Китае 5–12 января, дальше месяц в Японии. Билет куплен: из Белграда 4-го через Стамбул"}}}];
+  var STATUS=[{"k":"fix","t":"Даты","c":"Родители в Китае 5–14 января, мама Лизы и мы 5–12. Дальше у нас Япония до 10 февраля"},{"k":"fix","t":"Билеты всех троих","c":"Куплены 12 ноября 2026. Рейсы, время и цена больше не меняются"},{"k":"fix","t":"Города и порядок","c":"Шанхай, Шэньчжэнь с вылазкой в Гонконг, у родителей ещё Яншо. У нас дальше Фукуока и Токио"},{"k":"open","t":"Отели","c":"Цена ночи взята средняя по городу. Измерены только Шанхай и Шэньчжэнь, бронировать не начинали"},{"k":"open","t":"Поезда по Китаю","c":"Цены с Trip.com — «от». Билеты продают за 15 дней до отправления: на 8 января продажа откроется около 24 декабря"},{"k":"open","t":"Перелёт Шанхай — Шэньчжэнь","c":"Рейс и цена выбраны, билет не куплен. Багаж у Spring Airlines оплачивается отдельно, около €40 за перелёт"},{"k":"open","t":"Перелёт Гонконг — Фукуока","c":"Рейс и цена выбраны, билет не куплен"},{"k":"open","t":"Япония после Фукуоки","c":"Кансай, остров Авадзи и Дзигокудани посчитаны, но по дням не расписаны. Месяц в Токио стоит одной строкой"}];
   var FACTS=[{"s":["feb"],"w":"6 февраля 2027","t":"Китайский Новый год","c":"Нерабочая неделя 6–12 февраля по всей стране. Музеи и магазины работают по своему расписанию, транспорт забит. Январских интервалов не касается: они кончаются до праздника"},{"s":["feb"],"w":"20 февраля","t":"Праздник фонарей","c":"Конец новогоднего цикла. Вечером фонари и толпы в центрах городов"},{"s":["jan1324","feb"],"w":"22 января – 2 марта","t":"Новогодние переезды по Китаю","c":"Чуньюнь: 15 дней до Нового года и 25 после, вся страна едет к родным и обратно. Билеты на поезда и внутренние рейсы разбирают заранее, цены растут, вокзалы забиты. Из январских интервалов задевает только 13–24, и то три дня. Остальные три кончаются до начала"},{"s":[],"w":"декабрь – февраль","t":"Снежные обезьяны, Дзигокудани","c":"Макаки сидят в горячем источнике. Снег вероятнее в январе и феврале, зимой парк с 9:00 до 16:00, вход 800 ¥. Это север от Токио — отдельная поездка. На Авадзи у Кобе обезьяны тоже есть, но без источника; туда по пути только если влетаем в Фукуоку"},{"s":[],"w":"ср, пт, вс","t":"Прямой Казань — Шанхай","c":"Летает три раза в неделю, 8 часов туда и 9 обратно. Белград — Шанхай у Air Serbia по вторникам и субботам. Даты родителей и наши можно двигать только по этой сетке"},{"s":[],"w":"примерно за 2 месяца","t":"Когда появятся цены на поезда","c":"Китайские железные дороги открывают продажу за два месяца. На январь 2027 это середина ноября 2026 — до тех пор все цены по Чунцину, Гуйлиню и Чжанцзяцзе это «от» с Trip.com, а не настоящие"}];
   var SNAP=["2026-11-04","2026-11-12"];
   var LAND=[
@@ -478,16 +522,16 @@ svg.map{display:block;width:100%;height:auto}
     {"id":"mow-sha-feb-szx","a":"mow","b":"sha","w":"opt","m":"air","e":667,"t":"9 ч","d":"один билет, но аэропорты разные: туда прямым в Шанхай, обратно из Шэньчжэня, снимок 2026-11-05","u":"https://www.aviasales.ru/search/MOW1402PVG-SZX21021","k":1.1},
     {"id":"szx-mow-feb","a":"szx","b":"mow","w":"opt","m":"air","e":0,"t":"13 ч","d":"обратный из Шэньчжэня 07:20 → Шереметьево 15:30, пересадка 1,5 часа в Пекине","u":"https://www.aviasales.ru/search/MOW1402PVG-SZX21021","z":1,"k":1.8,"c":[0,16]},
     {"id":"mow-sha-feb","a":"mow","b":"sha","w":"mom","m":"air","e":708,"t":"9 ч","d":"14–21 февраля; февраль дешевле января на 50, снимок 2026-11-04","u":"https://www.aviasales.ru/search/MOW1402SHA21021","k":1.4},
-    {"id":"mow-sha-414","a":"mow","b":"sha","w":"both","m":"air","e":846,"t":"9 ч 10 м · 4–14 января","d":"КУПЛЕН. Прямой China Eastern MU248, Шереметьево 16:45 → Пудун 06:55, багаж включён, вес не указан. Домой 14 января из Шэньчжэня, снимок 2026-11-12","u":"https://www.trip.com/","k":1.1,"c":[-20,-28],"cc":[-20,-28]},
-    {"id":"szx-mow-414","a":"szx","b":"mow","w":"both","m":"air","e":0,"t":"13 ч 10 м","d":"обратная половина того же билета: 14 января 07:20 из Шэньчжэня, пересадка 1,5 часа в Пекине (Дасин), дома в 15:30. Рейсы MU6662 и MU2075","u":"https://www.trip.com/","z":1,"k":1.8,"c":[0,44]},
-    {"id":"mow-sha-412","a":"mow","b":"sha","w":"mom","m":"air","e":892,"t":"12 ч 40 м · 4–12 января","d":"КУПЛЕН. Air China CA910 и CA1557, Шереметьево 20:15, пересадка 2 ч 30 в Пекине без получения багажа, в Хунцяо 5-го в 13:55. Домой 12 января из Шэньчжэня, снимок 2026-11-10","u":"https://www.aviasales.ru/search/MOW0401SHA-SZX12011","k":0.95,"c":[-20,8],"cc":[-20,8]},
-    {"id":"szx-mow-412","a":"szx","b":"mow","w":"mom","m":"air","e":0,"t":"16 ч","d":"обратная половина того же билета: 12 января 09:40 из Шэньчжэня, пересадка 3,5 часа в Урумчи — багаж надо получить и сдать заново, дома в 20:35","u":"https://www.aviasales.ru/search/MOW0401SHA-SZX12011","z":1,"k":1.95,"c":[0,60]},
+    {"id":"mow-sha-414","a":"mow","b":"sha","w":"both","m":"air","e":846,"t":"9 ч 10 м · 4–14 января","d":"КУПЛЕН. Прямой China Eastern MU248, Шереметьево 16:45 → Пудун 06:55, багаж включён, вес не указан. Домой 14 января из Шэньчжэня, снимок 2026-11-12","u":"https://www.trip.com/","p":1,"k":1.1,"c":[-20,-28],"cc":[-20,-28]},
+    {"id":"szx-mow-414","a":"szx","b":"mow","w":"both","m":"air","e":0,"t":"13 ч 10 м","d":"обратная половина того же билета: 14 января 07:20 из Шэньчжэня, пересадка 1,5 часа в Пекине (Дасин), дома в 15:30. Рейсы MU6662 и MU2075","u":"https://www.trip.com/","z":1,"p":1,"k":1.8,"c":[0,44]},
+    {"id":"mow-sha-412","a":"mow","b":"sha","w":"mom","m":"air","e":892,"t":"12 ч 40 м · 4–12 января","d":"КУПЛЕН. Air China CA910 и CA1557, Шереметьево 20:15, пересадка 2 ч 30 в Пекине без получения багажа, в Хунцяо 5-го в 13:55. Домой 12 января из Шэньчжэня, снимок 2026-11-10","u":"https://www.aviasales.ru/search/MOW0401SHA-SZX12011","p":1,"k":0.95,"c":[-20,8],"cc":[-20,8]},
+    {"id":"szx-mow-412","a":"szx","b":"mow","w":"mom","m":"air","e":0,"t":"16 ч","d":"обратная половина того же билета: 12 января 09:40 из Шэньчжэня, пересадка 3,5 часа в Урумчи — багаж надо получить и сдать заново, дома в 20:35","u":"https://www.aviasales.ru/search/MOW0401SHA-SZX12011","z":1,"p":1,"k":1.95,"c":[0,60]},
     {"id":"sha-szx-08","a":"sha","b":"szx","w":"both","m":"air","e":135,"t":"2 ч 35","d":"Spring Airlines, 8 января, 17:15 → 19:50, багаж 20 кг. Вечерний рейс: день в Шанхае остаётся целым, снимок 2026-11-09","u":"https://www.aviasales.ru/search/SHA0801SZX2","k":0.6,"c":[36,8]},
     {"id":"mow-sha-516","a":"mow","b":"sha","w":"both","m":"air","e":713,"t":"11 ч 50 м · 5–16 января","d":"Шереметьево 17:25, пересадка 2 часа в Пекине, в Шанхае 6-го в 10:15. Домой 16 января из Шэньчжэня, снимок 2026-11-10","u":"https://www.aviasales.ru/search/MOW0501SHA-SZX16012","k":1.0,"c":[0,-28],"cc":[-20,-40]},
     {"id":"szx-mow-516","a":"szx","b":"mow","w":"both","m":"air","e":0,"t":"15 ч 55 м","d":"обратная половина того же билета: 16 января 09:40 из Шэньчжэня, пересадка 3,5 часа в Урумчи, дома в тот же день в 20:35","u":"https://www.aviasales.ru/search/MOW0501SHA-SZX16012","z":1,"k":1.7,"c":[0,24]},
     {"id":"sha-szx-09","a":"sha","b":"szx","w":"both","m":"air","e":102,"t":"2 ч 45","d":"China Southern, 9 января, 17:30 → 20:15, багаж 20 кг. Дневные рейсы стоят столько же, вечерний оставляет день в Шанхае, снимок 2026-11-09","u":"https://www.aviasales.ru/search/SHA0901SZX2","k":0.5,"c":[36,24]},
-    {"id":"beg-sha-404-s","a":"beg","b":"sha","w":"us","m":"air","e":937,"t":"16 ч 25","d":"КУПЛЕН. Turkish, один билет: TK1082 4 января в 08:50 из Белграда, пересадка 4 ч 25 в Стамбуле, TK280 — в Шанхае 5-го в 08:15. Домой 10 февраля из Токио, снимок 2026-11-12","u":"https://www.trip.com/","k":-1.65,"c":[0,48]},
-    {"id":"tyo-beg-404-s","a":"tyo","b":"beg","w":"us","m":"air","e":0,"t":"17 ч 55","d":"обратная половина того же билета: 10 февраля 22:05 из Ханэды — 11-го в 08:00 Белград, пересадка 2 ч 25 в Стамбуле","u":"https://www.trip.com/","z":1,"k":1.73,"c":[0,48]},
+    {"id":"beg-sha-404-s","a":"beg","b":"sha","w":"us","m":"air","e":937,"t":"16 ч 25","d":"КУПЛЕН. Turkish, один билет: TK1082 4 января в 08:50 из Белграда, пересадка 4 ч 25 в Стамбуле, TK280 — в Шанхае 5-го в 08:15. Домой 10 февраля из Токио, снимок 2026-11-12","u":"https://www.trip.com/","p":1,"k":-1.65,"c":[0,48]},
+    {"id":"tyo-beg-404-s","a":"tyo","b":"beg","w":"us","m":"air","e":0,"t":"17 ч 55","d":"обратная половина того же билета: 10 февраля 22:05 из Ханэды — 11-го в 08:00 Белград, пересадка 2 ч 25 в Стамбуле","u":"https://www.trip.com/","z":1,"p":1,"k":1.73,"c":[0,48]},
     {"id":"mow-sha-113","a":"mow","b":"sha","w":"both","m":"air","e":867,"t":"17 ч 15 м · 1–13 января","d":"вылет 1 января 20:05 через Пекин, в Шанхае 2-го в 18:20. Пересадка в Пекине около 7 ч 30 — дольше нашего обычного потолка, взято сознательно ради ранней даты, снимок 2026-11-09","u":"https://www.aviasales.ru/search/MOW0101SHA-SZX13012","k":1.2,"c":[-20,-52],"cc":[-20,-28]},
     {"id":"szx-mow-113","a":"szx","b":"mow","w":"both","m":"air","e":0,"t":"13 ч 45 м","d":"обратная половина того же билета: 13 января 09:20 из Шэньчжэня через Пекин, дома в тот же день в 18:05","u":"https://www.aviasales.ru/search/MOW0101SHA-SZX13012","z":1,"k":1.9,"c":[0,52]},
     {"id":"kzn-sha-113","a":"kzn","b":"sha","w":"par","m":"air","e":1463,"t":"8 ч · 1–13 января","d":"прямой Казань — Пудун 20:00 → 09:00, багаж 23 кг. Новогодняя наценка: тот же выход 13 января стоит 866, снимок 2026-11-09","u":"https://www.aviasales.ru/search/KZN0101SHA-SZX13012","k":0.5},
@@ -828,8 +872,9 @@ svg.map{display:block;width:100%;height:auto}
     b.style.display='';
     b.innerHTML=GROUPS.map(function(g){
       var list=mine().filter(function(x){return x.g===g.k});
-      var lab='<span>'+g.n+(g.k===st.group?' · его маршрут на карте':'')+'</span>';
-      if(!list.length)return '<label>'+lab+'<select disabled><option>вариантов нет</option></select></label>';
+      var lab='<span>'+g.n+(g.k===st.group?' · показан на карте':'')+'</span>';
+      if(!list.length)return '<label>'+lab+'<em>вариантов нет</em></label>';
+      if(list.length<2)return '<label>'+lab+'<em>'+esc(list[0].n)+'</em></label>';
       return '<label>'+lab+'<select data-g="'+g.k+'">'+list.map(function(x){
         return '<option value="'+x.id+'"'+(st.pick[g.k]===x.id?' selected':'')+'>'+esc(x.n)+'</option>';
       }).join('')+'</select></label>';
@@ -891,6 +936,21 @@ svg.map{display:block;width:100%;height:auto}
   });
 
   // Полоска фактов. Показываем те, у кого интервал совпал, и те, что без интервала.
+  // что уже решено окончательно, а что ещё может измениться. Данные — раздел
+  // status в places.yaml, на состояние страницы не смотрит и рисуется один раз
+  function status(){
+    var box=document.getElementById('status');
+    if(!STATUS.length){box.style.display='none';return}
+    function part(k,title){
+      var l=STATUS.filter(function(s){return s.k===k});
+      if(!l.length)return '';
+      return '<div class="col '+k+'"><h3>'+title+' <i>'+l.length+'</i></h3>'+
+        l.map(function(s){return '<div><b>'+esc(s.t)+'</b><span>'+esc(s.c)+'</span></div>'}).join('')+
+        '</div>';
+    }
+    box.innerHTML=part('fix','Прибито')+part('open','Ещё открыто');
+  }
+
   function facts(){
     var list=FACTS.filter(function(f){return !f.s.length||f.s.indexOf(st.win)>=0});
     var box=document.getElementById('facts');
@@ -914,10 +974,14 @@ svg.map{display:block;width:100%;height:auto}
   function windows(){
     var list=winsFor(st.group);
     if(!list.some(function(w){return w.k===st.win}))st.win=list.length?list[0].k:null;
-    document.getElementById('win').innerHTML=list.map(function(s){
-      return '<button data-k="'+s.k+'" aria-pressed="'+(st.win===s.k)+'">'+
-        '<span class="sn">'+esc(winN(s.k))+'</span><span class="sb">'+esc(winS(s.k))+'</span></button>';
-    }).join('');
+    // выбирать нечего, пока интервал один: показываем датой, а не кнопкой
+    document.getElementById('win').innerHTML=list.length<2
+      ? list.map(function(s){return '<p class="only"><span class="sn">'+esc(winN(s.k))+
+          '</span><span class="sb">'+esc(winS(s.k))+'</span></p>'}).join('')
+      : list.map(function(s){
+          return '<button data-k="'+s.k+'" aria-pressed="'+(st.win===s.k)+'">'+
+            '<span class="sn">'+esc(winN(s.k))+'</span><span class="sb">'+esc(winS(s.k))+'</span></button>';
+        }).join('');
     [].forEach.call(document.querySelectorAll('#win button'),function(b){
       b.addEventListener('click',function(){
         st.win=b.dataset.k; st.set=null; st.city=null; st.leg=null; st.mode='all'; st.town='main';
@@ -935,7 +999,7 @@ svg.map{display:block;width:100%;height:auto}
         var k=SETS.filter(function(s){return s.g===g.k&&winsFor(null).some(
           function(w){return s.s.indexOf(w.k)>=0})}).length;
         return '<button data-g="'+g.k+'" aria-pressed="'+(st.group===g.k)+'"'+
-          (k?'':' disabled')+'>'+g.n+'<span class="ct">'+k+'</span></button>';
+          (k?'':' disabled')+'>'+g.n+(k>1?'<span class="ct">'+k+'</span>':'')+'</button>';
       }).join('');
     [].forEach.call(document.querySelectorAll('#who button'),function(b){
       b.addEventListener('click',function(){
@@ -949,8 +1013,10 @@ svg.map{display:block;width:100%;height:auto}
     // второй уровень: варианты выбранного человека
     var box=document.getElementById('plans'),bar=document.getElementById('sort');
     if(!st.group){box.style.display='none';bar.style.display='none';return}
-    box.style.display='';bar.style.display='';
+    box.style.display='';
     var list=mine().filter(function(s){return s.g===st.group});
+    // сортировать нечего, пока вариант один
+    bar.style.display=list.length>1?'':'none';
     // порядок в places.yaml осмысленный, поэтому он же и разрешает ничьи
     var how=st.sort;
     list=list.map(function(s,i){return{s:s,i:i}}).sort(function(a,b){
@@ -1001,6 +1067,10 @@ svg.map{display:block;width:100%;height:auto}
          а в чужом списке «самый дешёвый из Казани» стоял на самой дорогой московской цене */
       // маршрут, который мы предлагаем как основной: помечен pick в places.yaml
       if(s.pick)bg='<span class="bg pk">наш выбор</span>'+bg;
+      // «наш выбор» и «самый дешёвый» сравнивают варианты между собой.
+      // Вариант один — сравнивать не с чем
+      if(list.length<2)bg='';
+      if(boughtIn(s))bg='<span class="bg ok">билет куплен</span>'+bg;
       // по какому ключу отсортировано, то и показываем в строке: цена и так справа
       // «8–13 дней»: верх — с лучшим вариантом второй стороны, низ — с худшим
       var k=how==='meet'?(s.m.meet==null?'':(s.m.meet_lo!=null&&s.m.meet_lo!==s.m.meet
@@ -1031,6 +1101,13 @@ svg.map{display:block;width:100%;height:auto}
       });
     });
   }
+
+  // куплен ли у набора билет из дома: страница помечает это и в списке, и в карточке
+  function boughtLegs(s){
+    var ids=(s&&s.r)||[];
+    return E.filter(function(e){return e.p&&ids.indexOf(e.id)>=0});
+  }
+  function boughtIn(s){return boughtLegs(s).length>0}
 
   function pick(id){ st.leg=st.leg===id?null:id; paint();side();card() }
   function many(n,one,few,rest){
@@ -1128,67 +1205,63 @@ svg.map{display:block;width:100%;height:auto}
         '</div>';
     }else if(st.set){
       var s=SETS.filter(function(x){return x.id===st.set})[0];
-      var m=s.m||{},sc=s.sc||{};
+      var m=s.m||{};
       // всё в карточке считается из выбранного города вылета: A — выбран второй билет,
-      // T — название города, from которого идёт крупная цена
+      // T — название города, из которого идёт крупная цена
       var A=st.town==='alt'&&m.alt_eur!=null, T=pvTown(s)||'';
+      var colN=mine().filter(function(x){return x.g===s.g}).length;
       var over=A?m.price_over_alt:m.price_over, over0=A?m.price0_over_alt:m.price0_over;
-      function dots(v){if(!v)return '<span class="dots none">не с чем сравнить</span>';
-        var o='<span class="dots">';for(var i=1;i<=5;i++)o+='<i class="'+(i<=v?'f':'')+'"></i>';return o+'</span>'}
-      // Пояснение к баллу спрятано под сам балл. В правой колонке 276 px четыре
-      // абзаца занимали полтора экрана и уводили план по дням далеко вниз
-      function row(lb,v,short,more){
+      // Пояснение спрятано под строку: в правой колонке 276 px развёрнутые абзацы
+      // занимали полтора экрана и уводили план по дням далеко вниз
+      function row(lb,short,more){
         return '<details class="r"'+(more?'':' data-flat')+'><summary><span class="hd"><span class="lb">'+lb+
-          '</span>'+dots(v)+'</span><span class="v">'+short+'</span></summary>'+
+          '</span></span><span class="v">'+short+'</span></summary>'+
           (more?'<div class="more">'+more+'</div>':'')+'</details>';
       }
+      // сравнение с соседями по колонке имеет смысл, только когда соседи есть
       function cheapest(pct){
-        return pct?'На '+pct+' % дороже самого дешёвого'+(T?' маршрута из '+esc(T):'')+'.'
-                  :'Самый дешёвый'+(T?' маршрут из '+esc(T):' маршрут')+'.';
+        if(colN<2)return '';
+        return pct?'На '+pct+' % дороже самого дешёвого'+(T?' маршрута из '+esc(T):'')+'. '
+                  :'Самый дешёвый'+(T?' маршрут из '+esc(T):' маршрут')+'. ';
       }
       var who=GROUPS.filter(function(g){return g.k===s.g})[0];
       var hh=A?m.alt_hours:m.hours, ff=A?m.alt_far:m.far, ll=A?m.alt_lay:m.lay,
           ov=A?m.comfort_over_alt:m.comfort_over;
+      var bl=boughtLegs(s);
       h='<div class="ch"><b>'+esc(s.n)+'</b><span class="who2">'+
         esc(winN(st.win,s.g))+' · '+esc(who?who.n:'')+'</span>'+
-        '<button class="x" data-close aria-label="Закрыть">×</button></div><div class="sc">'+
-        row('Цена',st.basis==='all'?(A?sc.price_alt:sc.price):(A?sc.price0_alt:sc.price0),
+        '<button class="x" data-close aria-label="Закрыть">×</button></div>'+
+        '<div class="buy '+(bl.length?'ok':'no')+'">'+(bl.length
+          ? 'Билет из дома и обратно куплен. Остальное — перелёты и поезда на месте — ещё нет'
+          : 'Билет ещё не куплен')+'</div>'+
+        '<div class="sc">'+
+        row('Цена',
           st.basis==='eur' ? money(pv(s,'eur'))+' на человека, только дорога'
-                           : money(pv(s))+' на человека',
+                           : money(pv(s))+' на человека, дорога и жильё',
           (st.basis==='eur' ? cheapest(over0)
             : money(pv(s,'eur'))+' дорога, '+money(m.stay)+' отели за '+many(m.nights,'ночь','ночи','ночей')+
               (m.flat?', '+money(m.flat)+' квартира в Токио на '+many(m.flatn,'ночь','ночи','ночей')+' ('+
                 (m.flatn<30?'меньше месяца':many(Math.floor(m.flatn/30),'месяц','месяца','месяцев')+
                   (m.flatn%30?' и '+many(m.flatn%30,'ночь','ночи','ночей'):''))+')':'')+'. '+cheapest(over))+
+          'Еда и городской транспорт сюда не входят.'+
           (m.alt_eur?'<p>Цена посчитана с билетом из '+esc(T)+'. Тот же маршрут '+
             esc(pvOtherLabel(s))+' стоит '+money(pvOther(s))+' на человека. Город вылета выбирается '+
-            'отдельно от маршрута, маршрут от этого не меняется. Значок «самый дешёвый» '+
-            'сравнивает маршруты между собой внутри одного города вылета, а не две цены '+
-            'на этой карточке.</p>':''))+
-        row('Комфорт',A?sc.comfort_alt:sc.comfort,
-          hh!=null?Math.round(hh)+' ч в дороге за всю поездку':'плана по дням нет',
+            'отдельно от маршрута, маршрут от этого не меняется.</p>':''))+
+        row('Дорога',
+          hh!=null?Math.round(hh)+' ч в пути за всю поездку':'плана по дням нет',
           hh==null?'':'Из них '+Math.round(ff)+' ч на дорогу из дома и обратно. '+
-            (ov?'На '+ov+' % больше, чем у лучшего в колонке. ':'Меньше всех в колонке. ')+
+            (colN<2?'':(ov?'На '+ov+' % больше, чем у лучшего в колонке. ':'Меньше всех в колонке. '))+
             (ll==null?'Пересадки по дороге домой ещё не проверены.'
               :ll?'Самая длинная пересадка '+String(ll).replace('.',',')+' ч.':'Без пересадок.'))+
-        row('Дней вместе',sc.meet,
-          m.meet==null?'не с чем сравнивать'
+        row('Дней вместе',
+          m.meet==null?'считать не с чем'
             :dn(m.meet)+' рядом: '+esc(m.meet_when||''),
           m.meet==null?'':(m.meet_where?'Города: '+esc(m.meet_where)+'. ':'')+
-            'Это если '+esc(m.meet_who||'')+' вариант «'+esc(m.meet_with||'')+'». '+
-            (m.meet_cheap!=null&&m.meet_cheap<m.meet
-              ? 'С самым дешёвым '+esc(m.meet_poss||'')+' вариантом («'+esc(m.meet_cheap_with)+'») — '+
-                dn(m.meet_cheap)+
-                (m.meet_cheap_when?', '+esc(m.meet_cheap_when):'')+'.'
-              : '')+
-            (m.meet_bad&&m.meet_bad.length
-              ? '<span class="warn">Мало общих дней с этими вариантами: '+m.meet_bad.slice(0,3).map(function(b){
-                  return '«'+esc(b.n)+'»'+(b.w?' '+esc(b.w):'')+' — '+dn(b.d)}).join(', ')+
-                (m.meet_bad.length>3?' и ещё '+(m.meet_bad.length-3):'')+
-                '. Маршрут цел, просто даты почти не пересекаются</span>'
-              : ''))+
-        row('Насыщенность',sc.rich,
-          m.places?many(m.places,'место','места','мест')+' в плане':'плана по дням нет','')+
+            'Это с вариантом «'+esc(m.meet_with||'')+'» '+esc(m.meet_who||'')+'. '+
+            'День переезда делится пополам, а утро, которое уходит на дорогу в аэропорт, '+
+            'общим днём не считается.')+
+        row('Что посмотрим',
+          m.places?many(m.places,'место','места','мест')+' в плане по дням':'плана по дням нет','')+
         '</div>';
     }
     box.hidden=!h; box.innerHTML=h;
@@ -1223,7 +1296,9 @@ svg.map{display:block;width:100%;height:auto}
         '<span class="mt">'+MODE[e.m]+' · '+e.t+(strong(e)?'':' · вариант')+
           (drawable(e)?'':' · за рамкой')+'</span></span>'+
         (e.z?'<span class="pr z">тот же билет</span>'
-             :'<span class="pr">'+money(e.e)+'</span>')+'</button></li>';}).join('');
+             :'<span class="pr">'+money(e.e)+'</span>')+
+        (e.p?'<span class="bought" title="билет на руках">куплено</span>':'')+
+        '</button></li>';}).join('');
     var sn=winN(st.win),val,lab;
     if(st.set){
       var cur=SETS.filter(function(s){return s.id===st.set})[0];
@@ -1313,6 +1388,7 @@ svg.map{display:block;width:100%;height:auto}
     });
   });
 
+  status();
   windows();pools();paint();side();sets();card();facts();zoom();trio();cities();
 })();
 </script>
