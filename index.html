@@ -75,8 +75,8 @@ svg.map{display:block;width:100%;height:auto}
 .ov-key{left:14px;bottom:14px}
 .ov-key b{display:block;font-size:var(--f1);font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:7px}
 .ov-key div{display:flex;align-items:center;gap:8px}
-/* на телефоне легенда закрывает Гуйлинь и Яншо, а подписи городов налезают друг на друга */
-@media(max-width:620px){.ov-key{display:none}}
+/* карта шире своей рамки и листается вбок: легенда уехала бы вместе с ней за край */
+.mapbox.pan .ov-key{display:none}
 
 .tip{position:absolute;pointer-events:none;background:var(--card);border:1.5px solid var(--blue);
   padding:10px 12px;font-size:13px;min-width:190px;opacity:0;transition:opacity .14s;z-index:9;line-height:1.5}
@@ -284,10 +284,6 @@ svg.map{display:block;width:100%;height:auto}
 .trio select{width:100%;border:1.5px solid var(--blue);background:var(--card);color:var(--ink);
   font:inherit;font-size:12.5px;font-weight:700;padding:8px 9px;border-radius:0;cursor:pointer}
 .trio select[disabled]{opacity:.5;cursor:default}
-/* числа у города прямо на карте читаются только на широком экране: на телефоне
-   карта сжимается втрое и подпись в 10 пикселей превращается в три. Те же числа
-   лежат в карточках под картой, там они и читаются */
-@media(max-width:900px){.daynum,.daykey{display:none}}
 
 /* --- кто где по дням: три строки на одной шкале дат ------------------------ */
 /* День делится на две половины: в день переезда утро в одном городе, вечер
@@ -320,6 +316,11 @@ svg.map{display:block;width:100%;height:auto}
 .tl .sg::after{content:'›';position:absolute;right:8px;top:50%;transform:translateY(-54%);font-size:18px;
   font-weight:800;line-height:1}
 .tl .sg.tiny::after{content:none}
+/* блок кончается переездом: значок переезда стоит на его правом крае и закрыл бы знак «›» */
+.tl .sg.hopend{padding-right:36px}
+.tl .sg.hopend::after{right:20px}
+/* открыт день этого переезда */
+.tl .hp[aria-pressed="true"],.tlv .vhop[aria-pressed="true"]{outline:2px solid var(--blue);outline-offset:2px}
 .tl .sg b{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;line-height:1.15;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl .sg i{font-style:normal;font-size:var(--f1);font-weight:600;white-space:nowrap;line-height:1.2}
@@ -351,8 +352,9 @@ svg.map{display:block;width:100%;height:auto}
 .tl button.mk{background:none;border:0;font:inherit;font-size:var(--f1);font-weight:800;color:var(--blue);
   cursor:pointer;padding:4px 6px;min-height:26px;text-decoration:underline;text-underline-offset:2px}
 /* статус билета словом под значком переезда: цвет тот же, что у метки в списке покупок */
-.tl .mk.sw{font-weight:800;white-space:normal;line-height:1.2;max-width:100%}
+.tl .mk.sw{font-weight:800;white-space:normal;line-height:1.2;max-width:100%;overflow-wrap:anywhere}
 .tl .mk .cap{display:block;font-weight:700;color:var(--ink2);white-space:nowrap}
+.tl .mk .cap.w{white-space:normal}
 .tl .s-buy{color:var(--jp)}
 .tl .s-book,.tl .s-wait{color:var(--blue)}
 .tl .s-todo{color:var(--bad)}
@@ -365,7 +367,7 @@ svg.map{display:block;width:100%;height:auto}
 .tl-tail .mk{padding-top:0;text-align:left}
 .tl-tail .mk .cap{display:inline;margin-right:5px}
 /* телефон: дни сверху вниз, стороны столбцами */
-.tlv{--vr:58px;padding:10px 10px 12px}
+.tlv{--vr:60px;padding:10px 10px 12px}
 .tlv .vh,.tlv .vg{display:grid;grid-template-columns:38px repeat(var(--k),minmax(0,1fr));column-gap:4px}
 .tlv .vh{margin-bottom:6px}
 .tlv .tl-lab{min-height:40px;padding:5px 6px;min-width:0}
@@ -1202,10 +1204,15 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
   }
   // В узкой колонке карта шире своей рамки. Показываем ту её часть, где идёт маршрут:
   // середину между крайними городами выбранного набора. Схему города — с середины
-  function focus(){
+  // Карта шире своей рамки: показываем подсказку «листайте вбок» и прячем легенду
+  function panHint(){
     var over=box.scrollWidth-box.clientWidth;
-    // подсказка «листайте вбок» видна, только когда карта шире своей рамки
     document.getElementById('zoom').classList.toggle('wide',over>1);
+    box.classList.toggle('pan',over>1);
+    return over;
+  }
+  function focus(){
+    var over=panHint();
     if(over<=0)return;
     if(st.mode==='city'){box.scrollLeft=over/2;return}
     var D=det(),ids=st.set?rsOf(st.set):[],xs=[];
@@ -1441,28 +1448,32 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
   // Таблица рисуется двумя способами. На широком экране дни идут слева направо,
   // строка — сторона. На телефоне одиннадцать дней в ширину не помещаются, поэтому
   // там дни идут сверху вниз, а стороны стоят тремя столбцами: вбок листать не надо
-  // Граница — 720 px, а не 620, как у остальной вёрстки: широкой таблице нужно 680 px,
-  // и на экране уже этого она снова поехала бы вбок
-  var NARROW=window.matchMedia('(max-width:720px)');
+  // Граница — 1000 px, а не 620, как у остальной вёрстки. В широком виде на день
+  // приходится (ширина − 214) / 11 px, а подписи «надо купить» и «Гонконг ›» занимают
+  // по 70 px: на экране уже 1000 px они налезают друг на друга
+  var NARROW=window.matchMedia('(max-width:1000px)');
   (NARROW.addEventListener?NARROW.addEventListener.bind(NARROW,'change'):NARROW.addListener.bind(NARROW))(function(){tl()});
   function hopIcon(h){return '<svg viewBox="0 0 24 24"><path d="'+ICON[h.e?h.e.m:'air']+'"/></svg>'}
   function hopSay(r,h){
     var stt=h.e?h.e.s:'';
-    return h.e?esc(legEnds(r.s,h.e).join(' → ')+', '+MODE[h.e.m]+(PILL[stt]?' — '+PILL[stt]:'')):'';
+    return h.e?esc(legEnds(r.s,h.e).join(' → ')+', '+MODE[h.e.m]+(PILL[stt]?' — '+PILL[stt]:'')):esc('переезд → '+h.to);
   }
+  // Стоянка, в которую приезжают в последний день шкалы или позже, в сетку не помещается:
+  // она стоит в строке «дальше». Правило одно для обоих видов таблицы
+  function late(a,ND){return a>=ND*2-1}
   // Хвост строки: то, что идёт после последнего дня шкалы. Месяц в Японии по дням
   // не расписан, поэтому Токио и дорога домой стоят строкой под таблицей
   function tailOf(r,T0,ND,label){
     var sh=(r.m.t0-T0)/DAY*2,T=[];
     r.m.segs.forEach(function(x){
-      if(x.a+sh<ND*2)return;
+      if(!late(x.a+sh,ND))return;
       var code=CODE[x.city]||'',n=x.stop?x.stop.n:0;
       T.push([x.a+sh,'<button class="sg c-'+code+'" data-c="'+code+'" data-g="'+r.g.k+'"><b>'+esc(x.city)+'</b><i>'+
         (n?many(n,'ночь','ночи','ночей'):'')+(x.stop?' · '+esc(x.stop.when):'')+'</i></button>']);
     });
     r.m.hops.forEach(function(h){
       var a=h.a+sh,stt=h.e?h.e.s:''; if(a<ND*2)return;
-      T.push([a,'<span class="th"><button class="hp '+stt+'" data-d="'+(a/2)+'" title="'+hopSay(r,h)+'" aria-label="'+hopSay(r,h)+'">'+
+      T.push([a,'<span class="th"><button class="hp '+stt+'" data-d="'+(a/2)+'" aria-pressed="'+(st.day===a/2)+'" title="'+hopSay(r,h)+'" aria-label="'+hopSay(r,h)+'">'+
         hopIcon(h)+'</button><span class="mk sw s-'+stt+'"><span class="cap">→ '+esc(h.to)+'</span>'+(PILL[stt]||'')+'</span></span>']);
     });
     if(!T.length)return '';
@@ -1479,22 +1490,27 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
       '<div class="tl-row tl-head"><span class="mo">'+MM0[d0.getUTCMonth()]+' '+d0.getUTCFullYear()+'</span>'+
       '<div class="tl-g">'+head+'</div></div>'+
       rows.map(function(r){
-        var sh=(r.m.t0-T0)/DAY*2;
+        var sh=(r.m.t0-T0)/DAY*2,short={};
         var g=st.day!=null&&st.day<ND?'<span class="col" style="grid-column:'+(st.day*2+1)+'/'+(st.day*2+3)+'"></span>':'';
         r.m.segs.forEach(function(x){
-          var a=x.a+sh,b=x.b+sh,code=CODE[x.city]||'',n=x.stop?x.stop.n:0;
-          if(a>=ND*2)return;
-          g+='<button class="sg c-'+code+(b>ND*2?' cut':'')+(b-a<2?' tiny':'')+'" data-c="'+code+'" data-g="'+r.g.k+
+          var a=x.a+sh,b=x.b+sh,code=CODE[x.city]||'',n=x.stop?x.stop.n:0,tiny=b-a<2;
+          if(late(a,ND))return;
+          // блок в полдня: имя города в него не влезает. Город и ночи пишутся под значком
+          // переезда, которым туда приехали, а сам блок остаётся цветной полосой
+          if(tiny)short[a-1]=esc(x.city)+(n?', '+many(n,'ночь','ночи','ночей'):'');
+          g+='<button class="sg c-'+code+(b>ND*2?' cut':'')+(tiny?' tiny':'')+(b%2&&b<=ND*2?' hopend':'')+'" data-c="'+code+'" data-g="'+r.g.k+
             '" style="grid-column:'+(a+1)+'/'+(Math.min(b,ND*2)+1)+'" title="'+esc(x.city)+
-            (x.stop?', '+esc(x.stop.when):'')+'"><b>'+esc(x.city)+'</b>'+(n?'<i>'+many(n,'ночь','ночи','ночей')+'</i>':'')+'</button>';
+            (x.stop?', '+esc(x.stop.when):'')+'" aria-label="'+esc(x.city)+(x.stop?', '+esc(x.stop.when):'')+'">'+
+            (tiny?'':'<b>'+esc(x.city)+'</b>'+(n?'<i>'+many(n,'ночь','ночи','ночей')+'</i>':''))+'</button>';
         });
         // кружок переезда — кнопка: открывает день переезда. Под ним статус билета словом,
         // тем же, что в списке покупок, поэтому легенда значков не нужна
         r.m.hops.forEach(function(h){
           var a=h.a+sh,stt=h.e?h.e.s:''; if(a>=ND*2)return;
           var col=' style="grid-column:'+(a+1)+'/'+(a+3)+'"';
-          g+='<button class="hp '+stt+'" data-d="'+(a/2)+'"'+col+' title="'+hopSay(r,h)+'" aria-label="'+hopSay(r,h)+'">'+hopIcon(h)+'</button>'+
-            '<span class="mk sw s-'+stt+'"'+col+'>'+(h.cap?'<span class="cap">'+esc(h.cap)+'</span>':'')+(PILL[stt]||'')+'</span>';
+          g+='<button class="hp '+stt+'" data-d="'+(a/2)+'" aria-pressed="'+(st.day===a/2)+'"'+col+' title="'+hopSay(r,h)+'" aria-label="'+hopSay(r,h)+'">'+hopIcon(h)+'</button>'+
+            '<span class="mk sw s-'+stt+'"'+col+'>'+(h.cap?'<span class="cap">'+esc(h.cap)+'</span>':'')+
+            (short[a]?'<span class="cap w">'+short[a]+'</span>':'')+(PILL[stt]||'')+'</span>';
         });
         r.m.marks.forEach(function(k){
           var a=k.a+sh; if(a>=ND*2)return;
@@ -1521,15 +1537,16 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
         var a=Math.ceil((x.a+sh)/2),b=Math.floor((x.b+sh)/2),code=CODE[x.city]||'',n=x.stop?x.stop.n:0;
         // стоянка между двумя днями переезда подряд: целого дня в ней нет и блок не получается.
         // Её ночи пишутся в ячейке переезда, которым туда приехали
+        if(late(x.a+sh,ND))return;
         if(b<=a&&n){short[a-1]=n;return}
-        if(a>=ND||b<=a)return;
+        if(b<=a)return;
         g+='<button class="sg c-'+code+(b>ND?' cut':'')+'" data-c="'+code+'" data-g="'+r.g.k+
           '" style="grid-column:'+c+';grid-row:'+(a+1)+'/'+(Math.min(b,ND)+1)+'"><b>'+esc(x.city)+'</b>'+
           (n?'<i>'+many(n,'ночь','ночи','ночей')+'</i>':'')+'</button>';
       });
       r.m.hops.forEach(function(h){
         var a=(h.a+sh)/2,stt=h.e?h.e.s:''; if(a>=ND)return;
-        g+='<button class="vhop s-'+stt+'" data-d="'+a+'" style="grid-column:'+c+';grid-row:'+(a+1)+'" aria-label="'+hopSay(r,h)+'">'+
+        g+='<button class="vhop s-'+stt+'" data-d="'+a+'" aria-pressed="'+(st.day===a)+'" style="grid-column:'+c+';grid-row:'+(a+1)+'" aria-label="'+hopSay(r,h)+'">'+
           '<b>'+hopIcon(h)+esc(h.to)+'</b>'+(short[a]?'<u>'+many(short[a],'ночь','ночи','ночей')+'</u>':'')+
           '<i>'+(PILL[stt]||'')+'</i></button>';
       });
@@ -1561,8 +1578,10 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
       st.day=td>=0&&td<ND?td:null}
     box.innerHTML=NARROW.matches?tlTall(rows,T0,ND):tlWide(rows,T0,ND);
     box.classList.toggle('has-day',st.day!=null);
-    [].forEach.call(box.querySelectorAll('[data-d]'),function(b){
+    [].forEach.call(box.querySelectorAll('[data-d]'),function(b,idx){
       b.addEventListener('click',function(){var i=+b.dataset.d;st.day=st.day===i?null:i;tl();
+        // таблица перерисована целиком: возвращаем фокус той же кнопке, иначе Tab начнёт с начала страницы
+        var again=box.querySelectorAll('[data-d]')[idx];if(again)again.focus({preventScroll:true});
         // на телефоне панель дня стоит под длинной таблицей: подводим её к глазам
         if(st.day!=null&&NARROW.matches)document.getElementById('dayp').scrollIntoView({behavior:'smooth',block:'nearest'})})});
     dayp(rows,T0);
@@ -1612,7 +1631,8 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
     var m=s.m||{},t0=Date.parse(m.d0+'T00:00:00Z'),now=today(),A=[],B=[],C=[];
     rsOf(s.id).forEach(function(id){
       var e=E.filter(function(x){return x.id===id})[0];
-      if(!e||(e.s!=='todo'&&e.s!=='wait'))return;
+      // обратная половина билета — не отдельная покупка: она в той же связке, что и дорога туда
+      if(!e||e.z||(e.s!=='todo'&&e.s!=='wait'))return;
       var dd=legDay(s,e),air=e.m==='air',ends=legEnds(s,e).join(' → ');
       if(dd!=null&&t0+dd*DAY<now)return;   // этот участок уже проехали
       var go=(dd==null?'':(air?'летим ':'едем ')+dstr(t0+dd*DAY)+' · ')+money(e.e);
@@ -1622,14 +1642,17 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
       else C.push({k:od==null?Infinity:od,t:od==null?(air?'Перелёт ':'Поезд ')+ends+': '+e.o
         :'Около '+dstr(od)+' откроется продажа: '+(air?'перелёт ':'поезд ')+ends,c:go,leg:e.id});
     });
-    ((m.chain)||[]).filter(function(x){return x.city!=null}).forEach(function(x){
-      if(hotelOf(s,CODE[x.city]).st!=='todo')return;
+    tlModel(s).segs.forEach(function(g){
+      var x=g.stop;
+      if(!x||hotelOf(s,CODE[x.city]).st!=='todo')return;
+      if(t0+Math.ceil(g.b/2)*DAY<=now)return;   // из этого жилья уже выехали
       B.push({t:'Забронировать жильё: '+x.city,c:x.when+' · '+many(x.n,'ночь','ночи','ночей')})});
     function by(p,q){return p.k-q.k}
     return A.sort(by).concat(B,C.sort(by));
   }
   function next(){
-    var b=document.getElementById('next'),s=curSet()||(st.group?setOf(st.group):null);
+    // вариантов у стороны несколько и ни один не выбран — дел показать нечьих
+    var b=document.getElementById('next'),s=curSet()||(single()&&st.group?setOf(st.group):null);
     if(!s||!s.m||!s.m.d0){b.style.display='none';b.innerHTML='';return}
     var L=todo(s),t0=Date.parse(s.m.d0+'T00:00:00Z'),td=Math.round((today()-t0)/DAY),off=0,hit=null;
     daysOf(s).forEach(function(d){var n=d.n||1;if(!hit&&td>=off&&td<off+n)hit=d;off+=n});
@@ -1649,7 +1672,8 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
         (st.nx?'свернуть':'ещё '+rest.length)+'</button>':'')+'</div>'+
       (st.nx&&rest.length?'<ol class="nx-list">'+rest.map(function(x){return '<li>'+item(x)+'</li>'}).join('')+'</ol>':'');
     var more=b.querySelector('.nx-more');
-    if(more)more.addEventListener('click',function(){st.nx=!st.nx;next()});
+    if(more)more.addEventListener('click',function(){st.nx=!st.nx;next();
+      var again=b.querySelector('.nx-more');if(again)again.focus({preventScroll:true})});
     [].forEach.call(b.querySelectorAll('[data-leg]'),function(x){
       x.addEventListener('click',function(){
         st.leg=x.dataset.leg;paint();side();card();
@@ -1746,7 +1770,7 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
       // «наш выбор» и «самый дешёвый» сравнивают варианты между собой.
       // Вариант один — сравнивать не с чем
       if(list.length<2)bg='';
-      if(boughtIn(s))bg='<span class="bg ok">билет куплен</span>'+bg;
+      if(boughtIn(s))bg='<span class="bg ok">'+PILL.buy+'</span>'+bg;
       // по какому ключу отсортировано, то и показываем в строке: цена и так справа
       // «8–13 дней»: верх — с лучшим вариантом второй стороны, низ — с худшим
       var k=how==='meet'?(s.m.meet==null?'':(s.m.meet_lo!=null&&s.m.meet_lo!==s.m.meet
@@ -1792,7 +1816,8 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
   // единственного числа: «3,5 дня». Целое число остаётся целым: «4 дня»
   function nu(n){return String(n).replace('.',',')}
   function dn(n){return n%1?nu(n)+' дня':many(n,'день','дня','дней')}
-  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;') }
+  // кавычка экранируется тоже: строки стоят и в атрибутах title и aria-label
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;') }
 
   // Даты в плане по дням вместо порядковых номеров. Первый день — date_out билета,
   // дальше подряд; у отрезка (месяц в Японии одной строкой) пишется вилка.
@@ -1885,8 +1910,12 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
         var k=CODE[x.city],flat=k==='tyo'&&m.flat;
         return {k:k,flat:flat,raw:flat?0:x.n*(STAY[k]?STAY[k].e:0)}});
       var rawSum=nights.reduce(function(a,x){return a+x.raw},0),share=rawSum?(m.stay||0)/rawSum:0;
+      // квартира в Токио оплачивается один раз, даже если Токио стоит в маршруте двумя стоянками
+      var flatPaid=false;
       nights.forEach(function(x){
-        if(hotelOf(s,x.k).st==='buy')paid+=x.flat?m.flat:Math.round(x.raw*share)});
+        if(hotelOf(s,x.k).st!=='buy')return;
+        if(!x.flat)paid+=Math.round(x.raw*share);
+        else if(!flatPaid){paid+=m.flat;flatPaid=true}});
       var total=pv(s),pct=total?Math.round(paid/total*100):0;
       h='<div class="sumx"><div class="brk">дорога '+money(pv(s,'eur'))+' · отели '+money(m.stay||0)+
         (m.flat?' · квартира в Токио '+money(m.flat):'')+'</div>'+
@@ -1900,7 +1929,8 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
     }
     box.hidden=!h; box.innerHTML=h;
     [].forEach.call(box.querySelectorAll('.fx'),function(b){
-      b.addEventListener('click',function(){var i=+b.dataset.x;st.fx=st.fx===i?null:i;card()})});
+      b.addEventListener('click',function(){var i=+b.dataset.x;st.fx=st.fx===i?null:i;card();
+        var again=box.querySelector('.fx[data-x="'+i+'"]');if(again)again.focus({preventScroll:true})})});
     trail();
     var x=box.querySelector('[data-close]');
     if(x)x.addEventListener('click',function(){
@@ -2067,7 +2097,9 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
   status();
   windows();auto();pools();paint();side();sets();card();facts();zoom();trio();cities();
   focus();
-  window.addEventListener('resize',focus);
+  // при смене размера окна только сверяем подсказку. Прокрутку карты не трогаем:
+  // телефон шлёт resize каждый раз, когда прячет адресную строку
+  window.addEventListener('resize',panHint);
   setTimeout(function(){svg.classList.add('ready')},0);
 })();
 </script>
