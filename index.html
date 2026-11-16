@@ -523,6 +523,23 @@ button.nx-i b{text-decoration:underline;text-decoration-color:var(--blue);text-d
 .cpt:hover .lb,.cpt:focus-visible .lb{text-decoration:underline}
 .cpt:focus-visible .ring{opacity:1}
 .cout rect{fill:var(--card);stroke:var(--ink2);stroke-width:1.1}
+.cout.k-hotel{cursor:pointer;outline:none}
+.cout.k-hotel:focus-visible rect{stroke-width:2.5}
+/* окошко метки схемы */
+.cpop{position:absolute;z-index:20;width:280px;max-width:calc(100vw - 32px);background:var(--card);color:var(--ink);
+  border:1.5px solid var(--blue);box-shadow:0 6px 24px rgba(0,0,0,.18);padding:12px 40px 12px 12px;font-size:var(--f3);line-height:1.4}
+.cpop[hidden]{display:none}
+.cpop .body{display:grid;grid-template-columns:16px 1fr;gap:9px}
+.cpop .ico{width:16px;height:16px;margin-top:3px}
+.cpop b{display:block;font-weight:700}
+.cpop em{display:block;font-style:normal;font-size:var(--f1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);margin-top:2px}
+.cpop .ico.k-hotel+div em{color:var(--hot)}
+.cpop small{display:block;font-size:var(--f2);color:var(--ink2);margin-top:3px}
+.cpop a{color:var(--blue);font-weight:600}
+.cpop .x{position:absolute;top:6px;right:6px;width:28px;height:28px;border:0;background:none;color:var(--ink2);
+  font-size:20px;line-height:1;cursor:pointer}
+.cpop .x:hover,.cpop .x:focus-visible{color:var(--ink);outline:2px solid var(--blue);outline-offset:-2px}
+.cpop.sheet{position:fixed;left:12px;right:12px;bottom:12px;top:auto;width:auto;max-width:none;max-height:60vh;overflow:auto}
 .cout text{fill:var(--ink2)}
 .cout.k-hotel rect{stroke:var(--hot)}
 .cout.k-hotel text{fill:var(--hot)}
@@ -625,6 +642,7 @@ svg[data-hide~="hotel"] .k-hotel{display:none}
     <div class="trio" id="trio"></div>
     <div class="mapbox" id="box">
       <svg class="map" id="svg" viewBox="0 0 900 620" role="img" aria-label="Карта маршрутов по Китаю и Японии"></svg>
+      <div class="cpop" id="cpop" role="dialog" aria-label="Что это за место" hidden></div>
 
       <div class="overlay ov-key">
         <b>Чем ехать</b>
@@ -1086,6 +1104,13 @@ svg[data-hide~="hotel"] .k-hotel{display:none}
       g.appendChild(N('rect',{x:x-w/2,y:y-10,width:w,height:21}));
       var t=label(g,x,y+4.5,(o.s==='l'?'← ':o.s==='t'?'↑ ':'')+o.n+(o.s==='r'?' →':o.s==='b'?' ↓':''),{sp:'.03em'});
       t.removeAttribute('fill');root.appendChild(g);
+      if(o.h!==undefined){
+        g.setAttribute('tabindex',0);g.setAttribute('role','button');g.setAttribute('aria-label',o.n);
+        var open=function(){if(pop.getAttribute('data-i')==='h'+o.h&&!pop.hidden){hidePop();return}
+          st.pt=null;paint();cities();showPop(g,popHtml(c,null,c.hotels[o.h]),'h'+o.h)};
+        g.addEventListener('click',open);
+        g.addEventListener('keydown',function(ev){if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();open()}});
+      }
     });
     // Метки по важности: места из плана — синие и крупнее, отели на выбор — малиновые ромбы,
     // места рядом и вокзалы — мелкие серые. Важное рисуется последним, поверх остального.
@@ -1107,7 +1132,10 @@ svg[data-hide~="hotel"] .k-hotel{display:none}
       // место подписи выбрала сборка: там, где она ничего не закрывает
       var t=label(g,pt.bx+pt.w/2,pt.by+13.5,pt.n,{size:10.5,sp:'.01em'});
       t.removeAttribute('fill');t.setAttribute('class','lb');
-      function pick(){st.pt=st.pt===i?null:i;paint();cities()}
+      function pick(){
+        st.pt=st.pt===i?null:i;paint();cities();
+        if(st.pt===i)showPop(g,popHtml(c,pt,pt.k==='hotel'?c.hotels[pt.h]:null),'p'+i);else hidePop();
+      }
       g.addEventListener('click',pick);
       g.addEventListener('keydown',function(ev){if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();pick()}});
       root.appendChild(g);PT[i]={ring:ring};
@@ -1252,7 +1280,7 @@ svg[data-hide~="hotel"] .k-hotel{display:none}
   // Три уровня одной карты: вся, страна крупно, город схемой
   function go(mode){
     if(mode!=='all'&&!canZoom())return;
-    st.mode=mode;st.sch=null;st.pt=null;st.city=null;st.leg=null;
+    st.mode=mode;st.sch=null;st.pt=null;st.city=null;st.leg=null;hidePop();
     if(mode!=='all')picks();
     paint();side();card();zoom();trio();cities();
     focus();
@@ -1260,7 +1288,7 @@ svg[data-hide~="hotel"] .k-hotel{display:none}
   function openCity(k){
     if(!CITY[k])return;
     if(st.mode!=='city')st.back=st.mode;
-    st.mode='city';st.sch=k;st.pt=null;st.city=null;st.leg=null;
+    st.mode='city';st.sch=k;st.pt=null;st.city=null;st.leg=null;hidePop();
     if(st.set)picks();
     paint();side();card();zoom();trio();cities();
     focus();
@@ -1378,21 +1406,62 @@ svg[data-hide~="hotel"] .k-hotel{display:none}
     svg.setAttribute('data-hide',Object.keys(HIDE).filter(function(k){return HIDE[k]}).join(' '));
   }
   applyHide();
+
+  // Окошко по нажатию на метку схемы: то же, что в списке под схемой, но рядом с меткой.
+  // На широком экране оно стоит сбоку от метки внутри рамки карты, на телефоне — внизу
+  // экрана поверх страницы: карта там шире экрана, и рядом с меткой места нет
+  var pop=document.getElementById('cpop');
+  function hidePop(){pop.hidden=true;pop.innerHTML='';pop.removeAttribute('data-i')}
+  function popHtml(c,pt,h){
+    if(h)return ico('hotel')+'<div>'+hotelBody(h)+'<small class="snap">Цена Trip.com на '+span(h.d0,h.d1)+'</small></div>';
+    var k=kindOf(pt);
+    return ico(k)+'<div><b>'+esc(pt.n)+'</b>'+(ptDay(pt)?'<em>'+esc(ptDay(pt))+'</em>':'')+
+      (pt.c?'<small>'+esc(pt.c)+'</small>':'')+
+      '<small class="snap">'+({plan:'Стоит в плане по дням',see:'Рядом, в план не входит',hub:'Вокзал или переход границы'}[k])+'</small></div>';
+  }
+  function showPop(el,html,key){
+    pop.innerHTML='<button type="button" class="x" aria-label="Закрыть">×</button><div class="body">'+html+'</div>';
+    pop.setAttribute('data-i',key);pop.hidden=false;
+    pop.querySelector('.x').addEventListener('click',function(){closePop()});
+    var sheet=window.innerWidth<620;
+    pop.classList.toggle('sheet',sheet);
+    if(sheet){pop.style.left='';pop.style.top='';return}
+    var r=el.getBoundingClientRect(),b=box.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight;
+    var x=r.right-b.left+box.scrollLeft+10,y=r.top-b.top-12;
+    if(x+w>box.scrollLeft+box.clientWidth-8)x=r.left-b.left+box.scrollLeft-w-10;
+    pop.style.left=Math.max(box.scrollLeft+8,x)+'px';
+    pop.style.top=Math.max(8,Math.min(y,box.clientHeight-h-8))+'px';
+  }
+  // закрыть окошко и снять выделение метки
+  function closePop(){
+    if(pop.hidden)return;
+    hidePop();
+    if(st.pt!==null){st.pt=null;paint();cities()}
+  }
+  document.addEventListener('click',function(ev){
+    if(pop.hidden||pop.contains(ev.target)||ev.target.closest('.cpt,.cout,.cpan li'))return;
+    closePop();
+  });
+  var BED={queen:'двуспальная кровать queen',double:'двуспальная кровать',king:'двуспальная кровать king'};
+  // строки про отель: одни и те же в списке под схемой и в окошке на схеме
+  function hotelBody(h){
+    var met=h.mm<1000?h.mm+' м':String(Math.round(h.mm/100)/10).replace('.',',')+' км';
+    return '<b>'+esc(h.full)+'</b><em>'+money(h.e)+' за ночь с завтраком</em>'+
+      '<small>'+esc(h.where)+'</small>'+
+      '<small>'+String(h.r).replace('.',',')+' из 10, отзывов '+h.rev.toLocaleString('ru-RU')+' · номер '+esc(h.m2)+' м², '+(BED[h.bed]||esc(h.bed))+
+      ' · метро '+esc(h.metro)+', '+met+'</small>'+
+      '<small><a href="'+esc(h.url)+'" target="_blank" rel="noopener">Trip.com</a>'+
+      (h.ig?' · <a href="'+esc(h.ig)+'" target="_blank" rel="noopener">пост в Instagram</a>':'')+'</small>';
+  }
   function hotelList(hs){
-    var BED={queen:'двуспальная кровать queen',double:'двуспальная кровать',king:'двуспальная кровать king'};
     var h0=hs[0],sn=h0.snap.split('-');
     return '<h4>Отели на выбор</h4><p class="key">Прислала Лиза. Цена за номер на двоих за ночь вместе с завтраком на двоих, '+
       'Trip.com на '+span(h0.d0,h0.d1)+', снято '+(+sn[2])+' '+MON[sn[1]-1]+'. Цены меняются каждый день — '+
       'перед бронью проверьте по ссылке. Номер — самый дешёвый с двуспальной кроватью</p><ol>'+
       hs.map(function(h){
-        var on=h.i!==undefined,met=h.mm<1000?h.mm+' м':String(Math.round(h.mm/100)/10).replace('.',',')+' км';
+        var on=h.i!==undefined;
         return '<li'+(on?' data-i="'+h.i+'"'+(st.pt===h.i?' class="on"':''):'')+'>'+ico('hotel')+'<span>'+
-          '<b>'+esc(h.full)+'</b><em>'+money(h.e)+' за ночь с завтраком</em>'+
-          '<small>'+esc(h.where)+(on?'':'. На схеме не поместился')+'</small>'+
-          '<small>'+String(h.r).replace('.',',')+' из 10, отзывов '+h.rev.toLocaleString('ru-RU')+' · номер '+esc(h.m2)+' м², '+(BED[h.bed]||esc(h.bed))+
-          ' · метро '+esc(h.metro)+', '+met+'</small>'+
-          '<small><a href="'+esc(h.url)+'" target="_blank" rel="noopener">Trip.com</a>'+
-          (h.ig?' · <a href="'+esc(h.ig)+'" target="_blank" rel="noopener">пост в Instagram</a>':'')+'</small></span></li>'}).join('')+'</ol>';
+          hotelBody(h)+(on?'':'<small>На схеме не поместился: стрелка у края</small>')+'</span></li>'}).join('')+'</ol>';
   }
 
   // Панель под схемой города: когда мы здесь, что с жильём, наши точки по номерам
@@ -1436,7 +1505,8 @@ svg[data-hide~="hotel"] .k-hotel{display:none}
     [].forEach.call(b.querySelectorAll('li[data-i]'),function(li){
       li.addEventListener('click',function(ev){
         if(ev.target.closest('a'))return;   // ссылка на отель открывается, точка не выбирается
-        var i=+li.dataset.i; st.pt=st.pt===i?null:i; paint();cities()});
+        var i=+li.dataset.i; st.pt=st.pt===i?null:i; paint();cities();
+        if(st.pt===null)hidePop()});
     });
     [].forEach.call(b.querySelectorAll('.lay-b'),function(btn){
       btn.addEventListener('click',function(){
@@ -1450,6 +1520,7 @@ svg[data-hide~="hotel"] .k-hotel{display:none}
 
   document.addEventListener('keydown',function(ev){
     if(ev.key!=='Escape')return;
+    if(!pop.hidden){closePop();return}
     if(st.mode==='city')go(st.back);
     else if(st.mode!=='all')go('all');
   });
